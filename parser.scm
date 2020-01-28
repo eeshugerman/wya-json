@@ -18,41 +18,51 @@
   (expect-string port "null")
   #nil)
 
-(define (read-control-char port)
-  (let ((c (read-char port)))
-    (case c
-      ((#\" #\\ #\/) (string c))
-      ((#\b) (string #\bs))
-      ((#\f) (string #\ff))
-      ((#\n) (string #\lf))
-      ((#\r) (string #\cr))
-      ((#\t) (string #\ht))
-      ((#\u) (throw 'not-implemented "escaped unicode characters"))
-      (else  (throw 'json-invalid port)))))
-
 (define (read-string port)
+  (define (read-control-char)
+    (let ((c (read-char port)))
+      (case c
+        ((#\" #\\ #\/) (string c))
+        ((#\b) (string #\bs))
+        ((#\f) (string #\ff))
+        ((#\n) (string #\lf))
+        ((#\r) (string #\cr))
+        ((#\t) (string #\ht))
+        ((#\u) (throw 'not-implemented "escaped unicode characters"))
+        (else  (throw 'json-invalid port)))))
   (read-char port)   ; toss #\"
   (let loop ((acc ""))
     (let ((c (read-char port)))
       (case c
-        ((#\") acc)
-        ((#\\) (loop (string-append acc (read-control-char port))))
+        ((#\") acc) ; end of string
+        ((#\\) (loop (string-append acc (read-control-char))))
         (else  (loop (string-append acc (string c))))))))
 
-(define (json->scm port)
+(define (read-array port)
+  (read-char port)  ; toss #\[
+  (let loop ((acc '()))
+    (let ((c (peek-char port)))
+      (case c
+        ((#\,) (read-char port) (loop acc))
+        ((#\]) (read-char port) acc)
+        (else  (loop (append acc (list (read-json port))))))))) ; not a tail call :(
+
+(define (read-json port)
   (let ((c (peek-char port)))
     (case c
-      ((#\ht #\vt #\lf #\cr #\sp)
-       (peak-char port)
+      ((#\ht #\vt #\lf #\cr #\sp) ; skip whitespace
+       (read-char port)
        (json->scm port))
       ((#\t) (read-true port))
       ((#\f) (read-false port))
       ((#\n) (read-null port))
       ((#\") (read-string port))
+      ((#\[) (read-array port))
       ((#\{) (read-object port))
-      ((#\[) (read-list port))
       (else  (read-number)))))
 
+(define (json->scm port)
+  (read-json port))
 
 (display (json->scm (current-input-port)))
 (newline)
