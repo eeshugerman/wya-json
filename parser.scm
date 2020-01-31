@@ -51,22 +51,42 @@
                result)))
         (else (loop(string-append acc (string (read-char port)))))))))
 
-
 (define (read-array port)
   (read-char port)  ; toss #\[
   (let loop ((acc '()))
     (let ((c (peek-char port)))
       (case c
-        ((#\ht #\vt #\lf #\cr #\sp)     ; TODO: how to not repeat this everywhere?
-         (read-char port) (loop acc))
-        ((#\,) (read-char port) (loop acc))
-        ((#\]) (read-char port) acc)
-        (else  (loop (append acc (list (read-json port)))))))))  ; not a tail call :(
+        ((#\ht #\vt #\lf #\cr #\sp) (read-char port) (loop acc))
+        ((#\,)                      (read-char port) (loop acc))
+        ((#\])                      (read-char port) acc)
+        (else
+         ; not a tail call :(
+         (loop (append acc (list (read-json port)))))))))
+
+(define (read-object port)
+  (define (read-:)
+    (let ((c (read-char port)))
+      (case c
+        ((#\ht #\vt #\lf #\cr #\sp) (read-:))
+        ((#\:)                      c)
+        (else                       (throw-invalid port)))))
+  (read-char port)  ; toss #\{
+  (let loop ((acc '()))
+    (let ((c (peek-char port)))
+      (case c
+        ((#\ht #\vt #\lf #\cr #\sp) (read-char port) (loop acc))
+        ((#\,)                      (read-char port) (loop acc))
+        ((#\})                      (read-char port) acc)
+        (else
+         (let* ((key   (read-string port))
+                (_     (read-:))
+                (value (read-json port)))
+           (loop (append acc (list (cons key value))))))))))
 
 (define (read-json port)
   (let ((c (peek-char port)))
     (case c
-      ((#\ht #\vt #\lf #\cr #\sp) ; skip whitespace
+      ((#\ht #\vt #\lf #\cr #\sp) ; skip whitespace -- TODO: how to not repeat this everywhere?
        (read-char port)
        (read-json port))
       ((#\t) (read-true port))
