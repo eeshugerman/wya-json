@@ -22,6 +22,9 @@
   #nil)
 
 (define (read-string port)
+  (define (unicode-warning)
+    (display "WARNING: Escaped unicode (\\uXXXX) is not supported")
+    (newline))
   (define (read-control-char)
     (let ((c (read-char port)))
       (case c
@@ -31,7 +34,7 @@
         ((#\n) (string #\lf))
         ((#\r) (string #\cr))
         ((#\t) (string #\ht))
-        ((#\u) (throw 'not-implemented "escaped unicode characters"))
+        ((#\u) (unicode-warning) "\\u")
         (else  (throw-invalid port)))))
   (read-char port)   ; toss #\"
   (let loop ((acc ""))
