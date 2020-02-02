@@ -62,7 +62,7 @@
       (case c
         ((#\ht #\vt #\lf #\cr #\sp) (read-char port) (loop acc))
         ((#\,)                      (read-char port) (loop acc))
-        ((#\])                      (read-char port) acc)
+        ((#\])                      (read-char port) (list->vector acc))
         (else
          ; not a tail call :(
          (loop (append acc (list (read-json port)))))))))
