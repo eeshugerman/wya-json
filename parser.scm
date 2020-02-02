@@ -1,4 +1,5 @@
 (use-modules (rnrs io ports))
+(use-modules (ice-9 pretty-print))
 
 (define (throw-invalid port)
   (throw 'json-invalid (get-line port)))
@@ -100,5 +101,4 @@
 (define (json->scm port)
   (read-json port))
 
-(display (json->scm (current-input-port)))
-(newline)
+(pretty-print (json->scm (current-input-port)))
