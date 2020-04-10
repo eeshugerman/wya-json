@@ -1,6 +1,10 @@
 (use-modules (rnrs io ports))
 (use-modules (ice-9 pretty-print))
 
+(define (skip-whitespace port)
+  (if (char-whitespace? (peek-char port))
+      (begin (read-char port) (skip-whitespace port))))
+
 (define (throw-invalid port)
   (throw 'json-invalid (get-line port)))
 
@@ -46,41 +50,32 @@
 
 (define (read-number port)
   (let loop ((acc ""))
-    (let ((c (peek-char port)))
-      (case c
-        ((#\ht #\vt #\lf #\cr #\sp #\, #\} #\])  ; whitespace, other possible terminators
-         (let ((result (string->number acc)))
-           (if (eq? result #f)
-               (throw-invalid port)
-               result)))
-        (else (loop(string-append acc (string (read-char port)))))))))
+    (if (member (peek-char port) '(#\, #\} #\]))
+        (let ((result (string->number (string-trim-both acc))))
+          (if (eq? result #f) (throw-invalid port) result))
+        (loop(string-append acc (string (read-char port)))))))
 
 (define (read-array port)
   (read-char port)  ; toss #\[
   (let loop ((acc '()))
+    (skip-whitespace port)
     (let ((c (peek-char port)))
       (case c
-        ((#\ht #\vt #\lf #\cr #\sp) (read-char port) (loop acc))
-        ((#\,)                      (read-char port) (loop acc))
-        ((#\])                      (read-char port) (list->vector acc))
-        (else
-         ; not a tail call :(
-         (loop (append acc (list (read-json port)))))))))
+        ((#\,) (read-char port) (loop acc))
+        ((#\]) (read-char port) (list->vector acc))
+        (else  (loop (append acc (list (read-json port)))))))))
 
 (define (read-object port)
   (define (read-:)
-    (let ((c (read-char port)))
-      (case c
-        ((#\ht #\vt #\lf #\cr #\sp) (read-:))
-        ((#\:)                      c)
-        (else                       (throw-invalid port)))))
+    (skip-whitespace port)
+    (if (not (eqv? (read-char port) #\:)) (throw-invalid port)))
   (read-char port)  ; toss #\{
   (let loop ((acc '()))
+    (skip-whitespace port)
     (let ((c (peek-char port)))
       (case c
-        ((#\ht #\vt #\lf #\cr #\sp) (read-char port) (loop acc))
-        ((#\,)                      (read-char port) (loop acc))
-        ((#\})                      (read-char port) acc)
+        ((#\,) (read-char port) (loop acc))
+        ((#\}) (read-char port) acc)
         (else
          (let* ((key   (read-string port))
                 (_     (read-:))
@@ -88,11 +83,9 @@
            (loop (append acc (list (cons key value))))))))))
 
 (define (read-json port)
+  (skip-whitespace port)
   (let ((c (peek-char port)))
     (case c
-      ((#\ht #\vt #\lf #\cr #\sp) ; skip whitespace -- TODO: how to not repeat this everywhere?
-       (read-char port)
-       (read-json port))
       ((#\t) (read-true port))
       ((#\f) (read-false port))
       ((#\n) (read-null port))
