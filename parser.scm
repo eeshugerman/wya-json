@@ -63,8 +63,8 @@
     (let ((c (peek-char port)))
       (case c
         ((#\,) (read-char port) (loop acc))
-        ((#\]) (read-char port) (list->vector acc))
-        (else  (loop (append acc (list (read-json port)))))))))
+        ((#\]) (read-char port) (list->vector (reverse acc)))
+        (else  (loop (cons (read-json port) acc)))))))
 
 (define (read-object port)
   (define (read-:)
@@ -76,12 +76,12 @@
     (let ((c (peek-char port)))
       (case c
         ((#\,) (read-char port) (loop acc))
-        ((#\}) (read-char port) acc)
+        ((#\}) (read-char port) (reverse acc))
         (else
          (let* ((key   (read-string port))
                 (_     (read-:))
                 (value (read-json port)))
-           (loop (append acc (list (cons key value))))))))))
+           (loop (cons (cons key value) acc ))))))))
 
 (define (read-json port)
   (skip-whitespace port)
