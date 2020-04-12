@@ -6,7 +6,8 @@
       (begin (read-char port) (skip-whitespace port))))
 
 (define (throw-invalid port)
-  (throw 'json-invalid (get-line port)))
+  (throw 'json-invalid `(line . ,(port-line port))
+                       `(column . ,(port-column port))))
 
 (define (expect-string port expected)
   (let ((found (get-string-n port (string-length expected))))
