@@ -33,21 +33,21 @@
   (define (read-control-char)
     (let ((c (read-char port)))
       (case c
-        ((#\" #\\ #\/) (string c))
-        ((#\b) (string #\bs))
-        ((#\f) (string #\ff))
-        ((#\n) (string #\lf))
-        ((#\r) (string #\cr))
-        ((#\t) (string #\ht))
+        ((#\" #\\ #\/) c)
+        ((#\b) #\bs)
+        ((#\f) #\ff)
+        ((#\n) #\lf)
+        ((#\r) #\cr)
+        ((#\t) #\ht)
         ((#\u) (unicode-warning) "\\u")
         (else  (throw-invalid port)))))
   (read-char port)   ; toss #\"
-  (let loop ((acc ""))
+  (let loop ((acc '()))
     (let ((c (read-char port)))
       (case c
-        ((#\") acc) ; end of string
-        ((#\\) (loop (string-append acc (read-control-char))))
-        (else  (loop (string-append acc (string c))))))))
+        ((#\") (reverse-list->string acc)) ; end of string
+        ((#\\) (loop (cons (read-control-char) acc)))
+        (else  (loop (cons c acc)))))))
 
 (define (read-number port)
   (let loop ((acc ""))
