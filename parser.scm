@@ -50,11 +50,13 @@
         (else  (loop (cons c acc)))))))
 
 (define (read-number port)
-  (let loop ((acc ""))
+  (let loop ((acc '()))
     (if (member (peek-char port) '(#\, #\} #\]))
-        (let ((result (string->number (string-trim-both acc))))
+        (let ((result (string->number
+                       (string-trim-both
+                        (reverse-list->string acc)))))
           (if (eq? result #f) (throw-invalid port) result))
-        (loop(string-append acc (string (read-char port)))))))
+        (loop (cons (read-char port) acc)))))
 
 (define (read-array port)
   (read-char port)  ; toss #\[
