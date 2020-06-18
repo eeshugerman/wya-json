@@ -71,7 +71,7 @@
 (define (read-object port)
   (define (read-:)
     (skip-whitespace port)
-    (if (not (eqv? (read-char port) #\:)) (throw-invalid port)))
+    (expect-string port ":"))
   (read-char port)  ; toss #\{
   (let loop ((acc '()))
     (skip-whitespace port)
